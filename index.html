@@ -4427,34 +4427,52 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <script>
+// Инициализация данных пользователя Telegram
 async function initUserData() {
+  console.log("🔍 initUserData function called");
+  
+  // Проверяем, что WebApp Telegram доступен
   if (window.Telegram && Telegram.WebApp) {
-    console.log("Telegram WebApp detected");
+    console.log("✅ Telegram WebApp detected");
     
+    // Инициализируем WebApp
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
     
+    // Получаем данные пользователя
     const user = Telegram.WebApp.initDataUnsafe?.user;
+    console.log("📋 User data from Telegram:", user);
     
     if (user) {
-      console.log("User data:", user);
+      console.log("👤 User found, processing...");
       
-      // СНАЧАЛА ОТОБРАЖАЕМ ДАННЫЕ (старая логика)
+      // Устанавливаем имя пользователя (ИСПРАВЛЕНО - используем first_name)
       const username = user.first_name || user.username || 'Пират';
       document.getElementById('username').textContent = username;
       document.getElementById('profile-username').textContent = username;
       
+      // Устанавливаем аватар
       const avatarUrl = user.photo_url;
       const avatarElement = document.getElementById('avatar');
       const profileAvatarElement = document.getElementById('profile-avatar-img');
       
       if (avatarUrl) {
+        console.log("🖼️ Setting avatar from URL:", avatarUrl);
         avatarElement.style.backgroundImage = `url(${avatarUrl})`;
         avatarElement.style.backgroundSize = 'cover';
+        avatarElement.style.backgroundPosition = 'center';
         profileAvatarElement.style.backgroundImage = `url(${avatarUrl})`;
         profileAvatarElement.style.backgroundSize = 'cover';
+        profileAvatarElement.style.backgroundPosition = 'center';
+        
+        // Очищаем SVG если был
+        avatarElement.innerHTML = '';
+        profileAvatarElement.innerHTML = '';
       } else {
+        // Дефолтный аватар
+        console.log("🎨 Using default avatar");
         const defaultAvatarColor = `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
+        
         avatarElement.innerHTML = 
           `<svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
             <circle cx="70" cy="70" r="70" fill="${defaultAvatarColor}"/>
@@ -4470,17 +4488,27 @@ async function initUserData() {
               ${username.charAt(0).toUpperCase()}
             </text>
           </svg>`;
+        
+        // Убираем background-image если был
+        avatarElement.style.backgroundImage = '';
+        profileAvatarElement.style.backgroundImage = '';
       }
       
-      const joinDate = new Date(user.id * 1000);
+      // Устанавливаем дату присоединения (примерная)
+      const joinDate = new Date();
       document.getElementById('join-date').textContent = joinDate.toLocaleDateString('ru-RU');
       
-      document.getElementById('profile-number').textContent = String(user.id).slice(0, 4);
+      // Устанавливаем номер профиля (первые 4 цифры ID)
+      document.getElementById('profile-number').textContent = String(user.id).slice(-4);
       
-      Telegram.WebApp.BackButton.show();
-      Telegram.WebApp.BackButton.onClick(handleBackButton);
+      // Настраиваем кнопку "Назад" в Telegram
+      if (Telegram.WebApp.BackButton) {
+        Telegram.WebApp.BackButton.show();
+        Telegram.WebApp.BackButton.onClick(handleBackButton);
+      }
       
-      // ПОПЫТКА СОХРАНИТЬ В БЭКЕНД НА ПОРТУ 3001
+      // ПОПЫТКА ОТПРАВИТЬ ДАННЫЕ НА БЭКЕНД
+      console.log("🔄 Trying to send to backend...");
       try {
         const response = await fetch('http://localhost:3001/api/auth/init', {
           method: 'POST',
@@ -4490,15 +4518,29 @@ async function initUserData() {
           body: JSON.stringify({ user: user })
         });
         
-        const data = await response.json();
+        console.log("📨 Backend response status:", response.status);
         
-        if (data.success) {
-          console.log("✅ User saved to backend:", data.user);
-          localStorage.setItem('backendUserId', data.user.id);
+        if (response.ok) {
+          const data = await response.json();
+          console.log("✅ Backend response:", data);
+          
+          if (data.success) {
+            console.log("💾 User saved to backend, ID:", data.user.id);
+            localStorage.setItem('backendUserId', data.user.id);
+            
+            // Обновляем баланс из бэкенда если нужно
+            if (data.user.balance !== undefined) {
+              document.getElementById('balance').textContent = data.user.balance;
+              localStorage.setItem('userBalance', data.user.balance.toString());
+            }
+          }
+        } else {
+          console.log("❌ Backend error status:", response.status);
         }
         
       } catch (error) {
-        console.log("❌ Backend error:", error);
+        console.error("❌ Fetch error:", error);
+        // НЕ ЛОМАЕМ РАБОТУ - продолжаем с локальными данными
       }
       
     } else {
@@ -4510,6 +4552,7 @@ async function initUserData() {
     setupDemoData();
   }
 
+  // Загрузка сохраненного баланса (локального)
   const savedBalance = localStorage.getItem('userBalance');
   if (savedBalance) {
     document.getElementById('balance').textContent = savedBalance;
@@ -4519,6 +4562,43 @@ async function initUserData() {
   }
 }
 
+// Функция для демо данных (если нет данных из Telegram)
+function setupDemoData() {
+  console.log("🔄 Setting up demo data");
+  
+  const username = "Капитан Джек";
+  document.getElementById('username').textContent = username;
+  document.getElementById('profile-username').textContent = username;
+  
+  const avatarElement = document.getElementById('avatar');
+  const profileAvatarElement = document.getElementById('profile-avatar-img');
+  
+  // Устанавливаем дефолтный аватар
+  const defaultAvatarColor = "#2E2E2E";
+  
+  avatarElement.innerHTML = 
+    `<svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="70" cy="70" r="70" fill="${defaultAvatarColor}"/>
+      <text x="70" y="80" font-family="Arial" font-size="60" fill="white" text-anchor="middle" dominant-baseline="middle">К</text>
+    </svg>`;
+  
+  profileAvatarElement.innerHTML = 
+    `<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="30" cy="30" r="30" fill="${defaultAvatarColor}"/>
+      <text x="30" y="35" font-family="Arial" font-size="30" fill="white" text-anchor="middle" dominant-baseline="middle">К</text>
+    </svg>`;
+    
+  // Устанавливаем демо дату и номер
+  document.getElementById('join-date').textContent = new Date().toLocaleDateString('ru-RU');
+  document.getElementById('profile-number').textContent = '1234';
+  document.getElementById('balance').textContent = '0';
+}
+
+// Вызываем инициализацию при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+  console.log("🚀 DOM loaded, initializing...");
+  initUserData();
+});
 // Вызываем инициализацию при загрузке
 document.addEventListener('DOMContentLoaded', function() {
   initUserData();
