@@ -4427,41 +4427,33 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <script>
-// Инициализация данных пользователя Telegram
-function initUserData() {
-  // Проверяем, что WebApp Telegram доступен
+async function initUserData() {
   if (window.Telegram && Telegram.WebApp) {
     console.log("Telegram WebApp detected");
     
-    // Инициализируем WebApp
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
     
-    // Получаем данные пользователя
     const user = Telegram.WebApp.initDataUnsafe?.user;
     
     if (user) {
       console.log("User data:", user);
       
-      // Устанавливаем имя пользователя
+      // СНАЧАЛА ОТОБРАЖАЕМ ДАННЫЕ (старая логика)
       const username = user.first_name || user.username || 'Пират';
       document.getElementById('username').textContent = username;
       document.getElementById('profile-username').textContent = username;
       
-      // Устанавливаем аватар
       const avatarUrl = user.photo_url;
       const avatarElement = document.getElementById('avatar');
       const profileAvatarElement = document.getElementById('profile-avatar-img');
       
       if (avatarUrl) {
-        console.log("Setting avatar from URL:", avatarUrl);
         avatarElement.style.backgroundImage = `url(${avatarUrl})`;
         avatarElement.style.backgroundSize = 'cover';
         profileAvatarElement.style.backgroundImage = `url(${avatarUrl})`;
         profileAvatarElement.style.backgroundSize = 'cover';
       } else {
-        // Дефолтный аватар
-        console.log("Using default avatar");
         const defaultAvatarColor = `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
         avatarElement.innerHTML = 
           `<svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
@@ -4480,38 +4472,33 @@ function initUserData() {
           </svg>`;
       }
       
-      // Устанавливаем дату присоединения (примерная)
       const joinDate = new Date(user.id * 1000);
       document.getElementById('join-date').textContent = joinDate.toLocaleDateString('ru-RU');
       
-      // Устанавливаем номер профиля (первые 4 цифры ID)
       document.getElementById('profile-number').textContent = String(user.id).slice(0, 4);
       
-      // Настраиваем кнопку "Назад" в Telegram
       Telegram.WebApp.BackButton.show();
       Telegram.WebApp.BackButton.onClick(handleBackButton);
       
-      // ПОПЫТКА СОХРАНИТЬ В БЭКЕНД (в фоне)
+      // ПОПЫТКА СОХРАНИТЬ В БЭКЕНД НА ПОРТУ 3001
       try {
-        fetch('http://localhost:3001/api/auth/init', {
+        const response = await fetch('http://localhost:3001/api/auth/init', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ user: user })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            console.log("✅ User saved to backend:", data.user);
-            localStorage.setItem('backendUserId', data.user.id);
-          }
-        })
-        .catch(error => {
-          console.log("❌ Backend error (non-critical):", error);
         });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          console.log("✅ User saved to backend:", data.user);
+          localStorage.setItem('backendUserId', data.user.id);
+        }
+        
       } catch (error) {
-        console.log("Backend init error:", error);
+        console.log("❌ Backend error:", error);
       }
       
     } else {
@@ -4523,7 +4510,6 @@ function initUserData() {
     setupDemoData();
   }
 
-  // Загрузка сохраненного баланса
   const savedBalance = localStorage.getItem('userBalance');
   if (savedBalance) {
     document.getElementById('balance').textContent = savedBalance;
@@ -4531,27 +4517,6 @@ function initUserData() {
     localStorage.setItem('userBalance', '0');
     document.getElementById('balance').textContent = '0';
   }
-}
-
-function setupDemoData() {
-  const username = "Капитан Джек";
-  document.getElementById('username').textContent = username;
-  document.getElementById('profile-username').textContent = username;
-  
-  const avatarElement = document.getElementById('avatar');
-  const profileAvatarElement = document.getElementById('profile-avatar-img');
-  
-  avatarElement.innerHTML = 
-    `<svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="70" cy="70" r="70" fill="#2E2E2E"/>
-      <text x="70" y="80" font-family="Arial" font-size="60" fill="white" text-anchor="middle" dominant-baseline="middle">К</text>
-    </svg>`;
-  
-  profileAvatarElement.innerHTML = 
-    `<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="30" cy="30" r="30" fill="#2E2E2E"/>
-      <text x="30" y="35" font-family="Arial" font-size="30" fill="white" text-anchor="middle" dominant-baseline="middle">К</text>
-    </svg>`;
 }
 
 // Вызываем инициализацию при загрузке
