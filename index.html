@@ -4427,6 +4427,25 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <script>
+function debugTelegram() {
+    console.log("=== TELEGRAM DEBUG ===");
+    console.log("Window.Telegram:", window.Telegram);
+    console.log("WebApp:", Telegram?.WebApp);
+    console.log("initDataUnsafe:", Telegram?.WebApp?.initDataUnsafe);
+    console.log("User:", Telegram?.WebApp?.initDataUnsafe?.user);
+    console.log("=========================");
+    
+    // Принудительно покажите данные если есть
+    if (Telegram?.WebApp?.initDataUnsafe?.user) {
+        const user = Telegram.WebApp.initDataUnsafe.user;
+        document.getElementById('username').textContent = user.first_name || 'Test User';
+        document.getElementById('profile-username').textContent = user.first_name || 'Test User';
+    }
+}
+
+// Вызовите сразу
+debugTelegram();
+  
 // Инициализация данных пользователя Telegram
 async function initUserData() {
   console.log("🔍 initUserData function called");
